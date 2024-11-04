@@ -10,4 +10,4 @@ main.o: main.cpp
 	$(CC) $(CGFLAGS) $^ -o main.o
 
 clean:
-	rm *.o read-file
+	rm -rf *.o read-file

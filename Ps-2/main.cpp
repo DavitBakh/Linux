@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
         if(cmd == "exit")
             return 0;
 
-        bool silent = cmd.find("silent") == 0;
+        bool silent = cmd.find("silent ") == 0;
         DoCommand(cmd, silent);
     }
     

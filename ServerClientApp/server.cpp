@@ -23,11 +23,10 @@ void SafeCout(std::string message)
 void* clientHandler(void *arg)
 {
     char buffer[1001];
+    int client_socket = *((int *)arg);
     // Receive message from client
     while (true)
     {
-        int client_socket = *((int *)arg);
-
         int rs = recv(client_socket, buffer, 1000, 0);
         if (rs == -1)
         {
@@ -49,6 +48,9 @@ void* clientHandler(void *arg)
             SafeCout("Got message:\n" + std::string{buffer} + "\n");
         }
     }
+
+    close(client_socket);
+    pthread_exit(NULL);
 
     return NULL;
 }
@@ -104,13 +106,14 @@ int main()
 
         SafeCout("Connected client with address: " + std::string{inet_ntoa(client_address.sin_addr)} + "\n");
 
-        pthread_t pid;
-        if(pthread_create(&pid, NULL, clientHandler, &client_socket) < 0)
+        pthread_t thread;
+        if(pthread_create(&thread, NULL, clientHandler, &client_socket) < 0)
         {
             SafeCout("pthread_create failed");
             close(client_socket);
             exit(errno);
         }
+        pthread_detach(thread);
     }
 
     // close

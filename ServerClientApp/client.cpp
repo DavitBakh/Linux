@@ -12,8 +12,8 @@ int main()
     struct sockaddr_in server_address;
 
     // create a socket
-    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_socket == -1)
+    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket == -1)
     {
         perror("socket creation error");
         exit(errno);
@@ -25,7 +25,7 @@ int main()
     server_address.sin_port = htons(8888);
 
     // connect
-    int connected = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+    int connected = connect(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
 
     if (connected == -1)
     {
@@ -38,11 +38,11 @@ int main()
     while (true)
     {
         getline(std::cin, mess);
-        int sent = send(client_socket, mess.c_str(), mess.size(), 0);
+        int sent = send(server_socket, mess.c_str(), mess.size(), 0);
         if (sent == -1)
             exit(errno);
     }
 
-    close(client_socket);
+    close(server_socket);
     return 0;
 }

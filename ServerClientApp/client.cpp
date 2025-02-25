@@ -37,7 +37,7 @@ int main()
     std::string mess;
     while (true)
     {
-        std::cin >> mess;
+        getline(std::cin, mess);
         int sent = send(client_socket, mess.c_str(), mess.size(), 0);
         if (sent == -1)
             exit(errno);

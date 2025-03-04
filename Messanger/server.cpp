@@ -16,29 +16,67 @@ struct Client
 {
     int socket;
     sockaddr_in* address;
+    std::string name;
+
+    Client() : socket(0), address(nullptr), name("Unknown") {}
+    Client(int socket, sockaddr_in* address, std::string name = "Unknown") : socket(socket), address(address), name(name) {}
 };
 
 std::vector<Client*> clients;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void SendToAll(std::string message, int currSocket)
+void SendToAll(std::string message, Client* currClient)
 {
     pthread_mutex_lock(&mutex);
     for (Client* client : clients)
     {
-        if(client == nullptr || client->socket == currSocket)
+        if(client == nullptr || client->socket == currClient->socket)
             continue;
 
-        std::cout << "Sending message:\n" << message << "\n";
+        std::cout << "Sending message from "<< currClient->name << ": " << message << "\n";
+        message = currClient->name + ": " + message;
         send(client->socket, message.c_str(), message.size(), 0);
     }
     pthread_mutex_unlock(&mutex);
+}
+
+
+void SetClientName(Client* client)
+{
+    if(send(client->socket, "Enter your name: ", 18, 0) < 0)
+    {
+        perror("send failed");
+        close(client->socket);
+        exit(errno);
+    }
+
+    char buffer[1001];
+    int rs = recv(client->socket, buffer, 1000, 0);
+    if (rs < 0)
+    {
+        printf("client socket connection error");
+        close(client->socket);
+        exit(errno);
+    }
+
+    if (rs == 0)
+    {
+        printf("Client disconnected\n");
+        close(client->socket);
+        exit(errno);
+    }
+
+    buffer[rs] = '\0';
+    client->name = std::string{buffer};
 }
 
 void* clientHandler(void *arg)
 {
     char buffer[1001];
     Client* client = (Client*)arg;
+
+    SetClientName(client);
+    std::cout << "Client: " << client->name << " was connected" << "\n";
     // Receive message from client
     while (true)
     {
@@ -52,16 +90,16 @@ void* clientHandler(void *arg)
 
         if (rs == 0)
         {
-            printf("Client disconnected\n");
+            std::cout << "Client: " << client->name << " disconnected\n";
             close(client->socket);
             break;
         }
 
         if (rs > 0)
         {
-            std::cout << "Got message:\n" << buffer << "\n";
             buffer[rs] = '\0';
-            SendToAll(std::string{buffer} + "\n", client->socket);
+            std::cout << "Got message from " << client->name << ": " << buffer << "\n";
+            SendToAll(std::string{buffer}, client);
         }
     }
 

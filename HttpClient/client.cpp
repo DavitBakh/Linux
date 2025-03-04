@@ -4,6 +4,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 int main()
 {
@@ -32,6 +38,13 @@ int main()
         exit(errno);
     }
 
+	int fd = open("httpforever.html", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
+    if(fd == -1)
+    {
+        perror("open failed");
+        exit(errno);
+    }
+
     // send message to server
     std::string mess = "GET / HTTP/1.1\r\nHost: httpforever.com\r\nConnection: close\r\n\r\n";
     int sent = send(server_socket, mess.c_str(), mess.size(), 0);
@@ -44,7 +57,11 @@ int main()
     while ((rs = recv(server_socket, buffer, 3000, 0)) > 0)
     {
         buffer[rs] = '\0';
-        std::cout << buffer;
+        if(write(fd, buffer, rs) == -1)
+        {
+            perror("write failed");
+            exit(errno);
+        }
     }
 
     if(rs == -1)
@@ -54,5 +71,6 @@ int main()
     }  
 
     close(server_socket);
+    close(fd);
     return 0;
 }

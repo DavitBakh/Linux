@@ -12,38 +12,39 @@
 #include <string>
 #include <vector>
 
+//в идеале для сервера нужно использовать мьютексы при работе с std::cout, но мне лень)
+
 struct Client
 {
     int socket;
-    sockaddr_in* address;
+    sockaddr_in *address;
     std::string name;
 
     Client() : socket(0), address(nullptr), name("Unknown") {}
-    Client(int socket, sockaddr_in* address, std::string name = "Unknown") : socket(socket), address(address), name(name) {}
+    Client(int socket, sockaddr_in *address, std::string name = "Unknown") : socket(socket), address(address), name(name) {}
 };
 
-std::vector<Client*> clients;
+std::vector<Client *> clients;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void SendToAll(std::string message, Client* currClient)
+void SendToAll(std::string message, Client *currClient)
 {
     pthread_mutex_lock(&mutex);
-    for (Client* client : clients)
+    for (Client *client : clients)
     {
-        if(client == nullptr || client->socket == currClient->socket)
+        if (client == nullptr || client->socket == currClient->socket)
             continue;
 
-        std::cout << "Sending message from "<< currClient->name << ": " << message << "\n";
+        std::cout << "Sending message from " << currClient->name << ": " << message << "\n";
         message = currClient->name + ": " + message;
         send(client->socket, message.c_str(), message.size(), 0);
     }
     pthread_mutex_unlock(&mutex);
 }
 
-
-void SetClientName(Client* client)
+void SetClientName(Client *client)
 {
-    if(send(client->socket, "Enter your name: ", 18, 0) < 0)
+    if (send(client->socket, "Enter your name: ", 18, 0) < 0)
     {
         perror("send failed");
         close(client->socket);
@@ -70,10 +71,24 @@ void SetClientName(Client* client)
     client->name = std::string{buffer};
 }
 
-void* clientHandler(void *arg)
+void RemoveClientFromList(Client *client)
+{
+    pthread_mutex_lock(&mutex);
+    for (auto it = clients.begin(); it != clients.end(); ++it)
+    {
+        if (*it == client)
+        {
+            clients.erase(it);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+}
+
+void *clientHandler(void *arg)
 {
     char buffer[1001];
-    Client* client = (Client*)arg;
+    Client *client = (Client *)arg;
 
     SetClientName(client);
     std::cout << "Client: " << client->name << " was connected" << "\n";
@@ -91,7 +106,7 @@ void* clientHandler(void *arg)
         if (rs == 0)
         {
             std::cout << "Client: " << client->name << " disconnected\n";
-            close(client->socket);
+            RemoveClientFromList(client);
             break;
         }
 
@@ -99,6 +114,16 @@ void* clientHandler(void *arg)
         {
             buffer[rs] = '\0';
             std::cout << "Got message from " << client->name << ": " << buffer << "\n";
+
+            if (strcmp(buffer, "/list") == 0)
+            {
+                std::string list = "Clients: ";
+                for (Client *c : clients)
+                    list += c->name + ", ";
+
+                send(client->socket, list.c_str(), list.size(), 0);
+                continue;
+            }
             SendToAll(std::string{buffer}, client);
         }
     }
@@ -162,7 +187,7 @@ int main()
 
         std::cout << "Connected client with address: " << inet_ntoa(client_address.sin_addr) << "\n";
 
-        Client* client = new Client();
+        Client *client = new Client();
         client->socket = client_socket;
         client->address = &client_address;
 
@@ -171,7 +196,7 @@ int main()
         pthread_mutex_unlock(&mutex);
 
         pthread_t thread;
-        if(pthread_create(&thread, NULL, clientHandler, client) < 0)
+        if (pthread_create(&thread, NULL, clientHandler, client) < 0)
         {
             perror("pthread_create failed");
             close(client_socket);

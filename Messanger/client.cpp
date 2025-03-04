@@ -62,6 +62,13 @@ int main()
     while (true)
     {
         getline(std::cin, mess);
+
+        if(mess == "/exit")
+        {
+            close(server_socket);
+            return 0;
+        }
+        
         int sent = send(server_socket, mess.c_str(), mess.size(), 0);
         if (sent == -1)
             exit(errno);

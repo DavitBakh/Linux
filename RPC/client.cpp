@@ -5,9 +5,23 @@
 #include <arpa/inet.h>
 #include <string>
 
+void* reciver(void* args)
+{
+    int server_socket = *(int*)args;
+
+    char buffer[3001];
+    int rs;
+    while((rs = recv(server_socket, buffer, 3000, 0)) > 0)
+    {
+        buffer[rs] = '\0';
+        std::cout << buffer << std::endl;
+    }
+
+    return nullptr;
+}
+
 int main()
 {
-
     // server address
     struct sockaddr_in server_address;
 
@@ -26,12 +40,15 @@ int main()
 
     // connect
     int connected = connect(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
-
     if (connected == -1)
     {
         perror("connection failed");
         exit(errno);
     }
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, reciver, &server_socket);
+    pthread_detach(thread);
 
     // send message to server
     std::string mess;

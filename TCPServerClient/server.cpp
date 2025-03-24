@@ -49,7 +49,7 @@ const char *Calculate(char buffer[], int size)
     if (strcmp(token, "ADD") == 0)
     {
         res = operands[0];
-        for (int i = 1; i < operands.size(); i++)
+        for (size_t i = 1; i < operands.size(); i++)
         {
             res += operands[i];
         }
@@ -57,7 +57,7 @@ const char *Calculate(char buffer[], int size)
     else if (strcmp(token, "SUB") == 0)
     {
         res = operands[0];
-        for (int i = 1; i < operands.size(); i++)
+        for (size_t i = 1; i < operands.size(); i++)
         {
             res -= operands[i];
         }
@@ -65,7 +65,7 @@ const char *Calculate(char buffer[], int size)
     else if (strcmp(token, "MUL") == 0)
     {
         res = operands[0];
-        for (int i = 1; i < operands.size(); i++)
+        for (size_t i = 1; i < operands.size(); i++)
         {
             res *= operands[i];
         }
@@ -73,7 +73,7 @@ const char *Calculate(char buffer[], int size)
     else if (strcmp(token, "DIV") == 0)
     {
         res = operands[0];
-        for (int i = 1; i < operands.size(); i++)
+        for (size_t i = 1; i < operands.size(); i++)
         {
             res /= operands[i];
         }
@@ -90,36 +90,33 @@ const char *Calculate(char buffer[], int size)
 
 void *clientHandler(void *arg)
 {
+
+    std::cout << "clientHandler\n";
     char buffer[BUFFER_SIZE + 1];
-    int client_socket = *((int *)arg);
-    // Receive message from client
-    while (true)
+    int* client_socket = (int *)arg;
+
+    int rs = recv(*client_socket, buffer, BUFFER_SIZE, 0);
+    if (rs == -1)
     {
-        int rs = recv(client_socket, buffer, BUFFER_SIZE, 0);
-        if (rs == -1)
-        {
-            SafeCout("client socket connection error");
-            close(client_socket);
-            continue;
-        }
+        SafeCout("client socket connection error");
 
-        if (rs == 0)
-        {
-            SafeCout("Client disconnected\n");
-            close(client_socket);
-            break;
-        }
-
-        if (rs > 0)
-        {
-            buffer[rs] = '\0';
-            const char *res = Calculate(buffer, rs);
-            send(client_socket, res, strlen(res), 0);
-        }
+        close(*client_socket);
     }
 
-    close(client_socket);
-    pthread_exit(NULL);
+    if (rs == 0)
+    {
+        SafeCout("Client disconnected\n");
+        close(*client_socket);
+        *client_socket = -1;
+        // close(client_socket);
+    }
+
+    if (rs > 0)
+    {
+        buffer[rs] = '\0';
+        const char *res = Calculate(buffer, rs);
+        send(*client_socket, res, strlen(res), 0);
+    }
 
     return NULL;
 }
@@ -134,8 +131,15 @@ int main()
         exit(errno);
     }
 
-    // create an endpoint
+    // Allow address reuse (unbind port)
+    int opt = 1;
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+        perror("setsockopt failed");
+        close(server_socket);
+        exit(errno);
+    }
 
+    // create an endpoint
     // socket address
     struct sockaddr_in server_address;
     // internet protocol = AF_INET
@@ -162,19 +166,24 @@ int main()
 
     struct pollfd fds[MAX_CLIENTS + 1];
     fds[0].fd = server_socket;
-    fds[0].events = POLLIN;
+    fds[0].events = POLLIN; 
 
     for (int i = 1; i <= MAX_CLIENTS; i++)
         fds[i].fd = -1;
 
     while (true)
     {
-
         int ret = poll(fds, MAX_CLIENTS + 1, SERVER_TIMEOUT);
         if (ret == -1)
         {
             perror("poll failed");
             exit(errno);
+        }
+
+        if(ret == 0)
+        {
+            std::cout << "Server timeout\n";
+            break;
         }
 
         if (fds[0].revents & POLLIN)

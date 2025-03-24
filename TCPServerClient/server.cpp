@@ -11,10 +11,12 @@
 #include <mutex>
 #include <string>
 #include <poll.h>
+#include <vector>
 
 #define PORT 8888
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
+#define SERVER_TIMEOUT 10000 // 10 seconds
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -25,14 +27,75 @@ void SafeCout(std::string message)
     pthread_mutex_unlock(&mutex);
 }
 
-void* clientHandler(void *arg)
+const char *Calculate(char buffer[], int size)
 {
-    char buffer[1001];
+    const char *delim = " ";
+    char *token = strtok(buffer, delim);
+
+    if (token == NULL)
+    {
+        return "Invalid input";
+    }
+
+    char *operand = strtok(NULL, delim);
+    std::vector<int> operands;
+    while (operand != NULL)
+    {
+        operands.push_back(atoi(operand));
+        operand = strtok(NULL, delim);
+    }
+
+    double res = 0;
+    if (strcmp(token, "ADD") == 0)
+    {
+        res = operands[0];
+        for (int i = 1; i < operands.size(); i++)
+        {
+            res += operands[i];
+        }
+    }
+    else if (strcmp(token, "SUB") == 0)
+    {
+        res = operands[0];
+        for (int i = 1; i < operands.size(); i++)
+        {
+            res -= operands[i];
+        }
+    }
+    else if (strcmp(token, "MUL") == 0)
+    {
+        res = operands[0];
+        for (int i = 1; i < operands.size(); i++)
+        {
+            res *= operands[i];
+        }
+    }
+    else if (strcmp(token, "DIV") == 0)
+    {
+        res = operands[0];
+        for (int i = 1; i < operands.size(); i++)
+        {
+            res /= operands[i];
+        }
+    }
+    else
+    {
+        return "Invalid input";
+    }
+
+    char *result = new char[100];
+    sprintf(result, "%f", res);
+    return result;
+}
+
+void *clientHandler(void *arg)
+{
+    char buffer[BUFFER_SIZE + 1];
     int client_socket = *((int *)arg);
     // Receive message from client
     while (true)
     {
-        int rs = recv(client_socket, buffer, 1000, 0);
+        int rs = recv(client_socket, buffer, BUFFER_SIZE, 0);
         if (rs == -1)
         {
             SafeCout("client socket connection error");
@@ -50,7 +113,8 @@ void* clientHandler(void *arg)
         if (rs > 0)
         {
             buffer[rs] = '\0';
-            SafeCout("Got message:\n" + std::string{buffer} + "\n");
+            const char *res = Calculate(buffer, rs);
+            send(client_socket, res, strlen(res), 0);
         }
     }
 
@@ -59,7 +123,6 @@ void* clientHandler(void *arg)
 
     return NULL;
 }
-
 
 int main()
 {
@@ -107,7 +170,7 @@ int main()
     while (true)
     {
 
-        int ret = poll(fds, MAX_CLIENTS + 1, -1);
+        int ret = poll(fds, MAX_CLIENTS + 1, SERVER_TIMEOUT);
         if (ret == -1)
         {
             perror("poll failed");
@@ -144,29 +207,14 @@ int main()
         {
             if (fds[i].fd != -1 && fds[i].revents & POLLIN)
             {
-                char buffer[BUFFER_SIZE+1];
-                int rs = recv(fds[i].fd, buffer, BUFFER_SIZE, 0);
-                if (rs == -1)
+                pthread_t thread;
+                if (pthread_create(&thread, NULL, clientHandler, &fds[i].fd) < 0)
                 {
-                    SafeCout("client socket connection error");
+                    SafeCout("pthread_create failed");
                     close(fds[i].fd);
-                    fds[i].fd = -1;
-                    continue;
+                    exit(errno);
                 }
-
-                if (rs == 0)
-                {
-                    SafeCout("Client disconnected\n");
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    break;
-                }
-
-                if (rs > 0)
-                {
-                    buffer[rs] = '\0';
-                    SafeCout("Got message:\n" + std::string{buffer} + "\n");
-                }
+                pthread_detach(thread);
             }
         }
     }

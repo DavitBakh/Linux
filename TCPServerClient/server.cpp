@@ -12,19 +12,21 @@
 #include <string>
 #include <poll.h>
 #include <vector>
+//#include "parallel_scheduler.h"
 
 #define PORT 8888
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
 #define SERVER_TIMEOUT 10000 // 10 seconds
+#define POOLSIZE 10
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void SafeCout(std::string message)
 {
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&_mutex);
     std::cout << message;
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&_mutex);
 }
 
 const char *Calculate(char buffer[], int size)
@@ -99,7 +101,6 @@ void *clientHandler(void *arg)
     if (rs == -1)
     {
         SafeCout("client socket connection error");
-
         close(*client_socket);
     }
 
@@ -108,7 +109,6 @@ void *clientHandler(void *arg)
         SafeCout("Client disconnected\n");
         close(*client_socket);
         *client_socket = -1;
-        // close(client_socket);
     }
 
     if (rs > 0)
@@ -123,7 +123,8 @@ void *clientHandler(void *arg)
 
 int main()
 {
-    // create a socket
+    //parallel_scheduler scheduler(POOLSIZE);
+
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1)
     {
@@ -131,32 +132,25 @@ int main()
         exit(errno);
     }
 
-    // Allow address reuse (unbind port)
     int opt = 1;
-    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) 
+    {
         perror("setsockopt failed");
         close(server_socket);
         exit(errno);
     }
 
-    // create an endpoint
-    // socket address
     struct sockaddr_in server_address;
-    // internet protocol = AF_INET
     server_address.sin_family = AF_INET;
-    // accept or any address (bind the socket to all available interfaces)
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    // port
     server_address.sin_port = htons(PORT);
 
-    // Bind server_socket to server_address
     if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0)
     {
         perror("bind failed");
         exit(errno);
     }
 
-    // Listen for incoming connections
     if (listen(server_socket, MAX_CLIENTS) < 0)
     {
         perror("listen failed");
@@ -173,6 +167,7 @@ int main()
 
     while (true)
     {
+        std::cout << "Poll\n";
         int ret = poll(fds, MAX_CLIENTS + 1, SERVER_TIMEOUT);
         if (ret == -1)
         {
@@ -182,7 +177,7 @@ int main()
 
         if(ret == 0)
         {
-            std::cout << "Server timeout\n";
+            std::cout << "Server timeout" << std::endl;
             break;
         }
 
@@ -192,7 +187,6 @@ int main()
             struct sockaddr_in client_address;
             unsigned int client_addr_len = sizeof(client_address);
 
-            // Accept incoming connection
             if ((client_socket = accept(server_socket, (struct sockaddr *)&client_address, &client_addr_len)) < 0)
             {
                 SafeCout("accept failed");
@@ -212,25 +206,27 @@ int main()
             }
         }
 
+        std::cout << "TEMP\n";
         for (int i = 1; i <= MAX_CLIENTS; i++)
         {
             if (fds[i].fd != -1 && fds[i].revents & POLLIN)
             {
+                //scheduler.run(clientHandler, &fds[i].fd);
                 pthread_t thread;
-                if (pthread_create(&thread, NULL, clientHandler, &fds[i].fd) < 0)
-                {
-                    SafeCout("pthread_create failed");
-                    close(fds[i].fd);
-                    exit(errno);
-                }
+                pthread_create(&thread, NULL, clientHandler, &fds[i].fd);
                 pthread_detach(thread);
+                sleep(100);
             }
+
+            std::cout << "FOR\n";
         }
+
+        std::cout <<"end\n";
     }
 
     // close
     close(server_socket);
-    pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&_mutex);
 
     return 0;
 }

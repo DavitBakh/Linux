@@ -12,7 +12,7 @@
 #include <string>
 #include <poll.h>
 #include <vector>
-//#include "parallel_scheduler.h"
+#include "parallel_scheduler.h"
 
 #define PORT 8888
 #define MAX_CLIENTS 10
@@ -20,14 +20,14 @@
 #define SERVER_TIMEOUT 10000 // 10 seconds
 #define POOLSIZE 10
 
-pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
-
-void SafeCout(std::string message)
+struct Client
 {
-    pthread_mutex_lock(&_mutex);
-    std::cout << message;
-    pthread_mutex_unlock(&_mutex);
-}
+    int socket;
+    char *buffer;
+    int size;
+
+    Client(int socket, char *buffer, int size) : socket(socket), buffer(buffer), size(size) {}
+};
 
 const char *Calculate(char buffer[], int size)
 {
@@ -93,37 +93,17 @@ const char *Calculate(char buffer[], int size)
 void *clientHandler(void *arg)
 {
 
-    std::cout << "clientHandler\n";
-    char buffer[BUFFER_SIZE + 1];
-    int* client_socket = (int *)arg;
+    Client *client = (Client *)arg;
 
-    int rs = recv(*client_socket, buffer, BUFFER_SIZE, 0);
-    if (rs == -1)
-    {
-        SafeCout("client socket connection error");
-        close(*client_socket);
-    }
-
-    if (rs == 0)
-    {
-        SafeCout("Client disconnected\n");
-        close(*client_socket);
-        *client_socket = -1;
-    }
-
-    if (rs > 0)
-    {
-        buffer[rs] = '\0';
-        const char *res = Calculate(buffer, rs);
-        send(*client_socket, res, strlen(res), 0);
-    }
+    const char *res = Calculate(client->buffer, client->size);
+    send(client->socket, res, strlen(res), 0);
 
     return NULL;
 }
 
 int main()
 {
-    //parallel_scheduler scheduler(POOLSIZE);
+    parallel_scheduler scheduler(POOLSIZE);
 
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1)
@@ -133,7 +113,7 @@ int main()
     }
 
     int opt = 1;
-    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) 
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
     {
         perror("setsockopt failed");
         close(server_socket);
@@ -160,14 +140,13 @@ int main()
 
     struct pollfd fds[MAX_CLIENTS + 1];
     fds[0].fd = server_socket;
-    fds[0].events = POLLIN; 
+    fds[0].events = POLLIN;
 
     for (int i = 1; i <= MAX_CLIENTS; i++)
         fds[i].fd = -1;
 
     while (true)
     {
-        std::cout << "Poll\n";
         int ret = poll(fds, MAX_CLIENTS + 1, SERVER_TIMEOUT);
         if (ret == -1)
         {
@@ -175,7 +154,7 @@ int main()
             exit(errno);
         }
 
-        if(ret == 0)
+        if (ret == 0)
         {
             std::cout << "Server timeout" << std::endl;
             break;
@@ -183,19 +162,22 @@ int main()
 
         if (fds[0].revents & POLLIN)
         {
+            ret--;
+
             int client_socket;
             struct sockaddr_in client_address;
             unsigned int client_addr_len = sizeof(client_address);
 
             if ((client_socket = accept(server_socket, (struct sockaddr *)&client_address, &client_addr_len)) < 0)
             {
-                SafeCout("accept failed");
+                perror("accept failed");
                 exit(errno);
             }
 
-            SafeCout("Connected client with address: " + std::string{inet_ntoa(client_address.sin_addr)} + "\n");
+            std::cout << "Connected client with address: " << std::string{inet_ntoa(client_address.sin_addr)} << std::endl;
 
-            for (int i = 1; i <= MAX_CLIENTS; i++)
+            int i = 1;
+            for (; i <= MAX_CLIENTS; i++)
             {
                 if (fds[i].fd == -1)
                 {
@@ -204,29 +186,47 @@ int main()
                     break;
                 }
             }
+
+            if (i > MAX_CLIENTS)
+            {
+                std::cout << "No more clients can be connected" << std::endl;
+                close(client_socket);
+            }
         }
 
-        std::cout << "TEMP\n";
-        for (int i = 1; i <= MAX_CLIENTS; i++)
+        for (int i = 1; i <= MAX_CLIENTS && ret; i++)
         {
             if (fds[i].fd != -1 && fds[i].revents & POLLIN)
             {
-                //scheduler.run(clientHandler, &fds[i].fd);
-                pthread_t thread;
-                pthread_create(&thread, NULL, clientHandler, &fds[i].fd);
-                pthread_detach(thread);
-                sleep(100);
+                ret--;
+
+                char buffer[BUFFER_SIZE + 1];
+                int rs = recv(fds[i].fd, buffer, BUFFER_SIZE, 0);
+
+                if (rs == -1)
+                {
+                    perror("client socket connection error");
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                }
+
+                if (rs == 0)
+                {
+                    perror("Client disconnected\n");
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                }
+
+                if (rs > 0)
+                {
+                    buffer[rs] = '\0';
+                    Client client(fds[i].fd, buffer, rs);
+                    scheduler.run(clientHandler, &client);
+                }
             }
-
-            std::cout << "FOR\n";
         }
-
-        std::cout <<"end\n";
     }
 
-    // close
     close(server_socket);
-    pthread_mutex_destroy(&_mutex);
-
     return 0;
 }

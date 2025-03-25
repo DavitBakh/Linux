@@ -12,7 +12,14 @@
 #include <string>
 #include <vector>
 
-//в идеале для сервера нужно использовать мьютексы при работе с std::cout, но мне лень)
+pthread_mutex_t coutMutex = PTHREAD_MUTEX_INITIALIZER;
+void SafeCout(std::string message)
+{
+    pthread_mutex_lock(&coutMutex);
+    std::cout << message;
+    pthread_mutex_unlock(&coutMutex);
+}
+
 
 struct Client
 {
@@ -46,7 +53,7 @@ void SetClientName(Client *client)
 {
     if (send(client->socket, "Enter your name: ", 18, 0) < 0)
     {
-        perror("send failed");
+        SafeCout("send failed");
         close(client->socket);
         exit(errno);
     }
@@ -55,14 +62,14 @@ void SetClientName(Client *client)
     int rs = recv(client->socket, buffer, 1000, 0);
     if (rs < 0)
     {
-        printf("client socket connection error");
+        SafeCout("client socket connection error");
         close(client->socket);
         exit(errno);
     }
 
     if (rs == 0)
     {
-        printf("Client disconnected\n");
+        SafeCout("Client disconnected\n");
         close(client->socket);
         exit(errno);
     }
@@ -91,21 +98,22 @@ void *clientHandler(void *arg)
     Client *client = (Client *)arg;
 
     SetClientName(client);
-    std::cout << "Client: " << client->name << " was connected" << "\n";
+    SafeCout("Client: " + client->name + " was connected\n");
+
     // Receive message from client
     while (true)
     {
         int rs = recv(client->socket, buffer, 1000, 0);
         if (rs == -1)
         {
-            printf("client socket connection error");
+            SafeCout("client socket connection error");
             close(client->socket);
             continue;
         }
 
         if (rs == 0)
         {
-            std::cout << "Client: " << client->name << " disconnected\n";
+            SafeCout("Client: " + client->name + " disconnected\n");
             RemoveClientFromList(client);
             break;
         }
@@ -113,7 +121,7 @@ void *clientHandler(void *arg)
         if (rs > 0)
         {
             buffer[rs] = '\0';
-            std::cout << "Got message from " << client->name << ": " << buffer << "\n";
+            SafeCout("Got message from " + client->name + ": " + std::string{buffer} + "\n");
 
             if (strcmp(buffer, "/list") == 0)
             {
@@ -181,11 +189,11 @@ int main()
         // Accept incoming connection
         if ((client_socket = accept(server_socket, (struct sockaddr *)&client_address, &client_addr_len)) < 0)
         {
-            perror("accept failed");
+            SafeCout("accept failed");
             exit(errno);
         }
 
-        std::cout << "Connected client with address: " << inet_ntoa(client_address.sin_addr) << "\n";
+        SafeCout("Connected client with address: " + std::string{inet_ntoa(client_address.sin_addr)} + "\n");
 
         Client *client = new Client();
         client->socket = client_socket;
@@ -198,7 +206,7 @@ int main()
         pthread_t thread;
         if (pthread_create(&thread, NULL, clientHandler, client) < 0)
         {
-            perror("pthread_create failed");
+            SafeCout("pthread_create failed");
             close(client_socket);
             exit(errno);
         }
@@ -207,6 +215,8 @@ int main()
 
     // close
     close(server_socket);
+    pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&coutMutex);
 
     return 0;
 }

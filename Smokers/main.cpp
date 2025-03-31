@@ -11,78 +11,142 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <signal.h>
 
 using namespace std;
 
-#define B 0
-#define T 1
-#define P 2
-#define M 3
+#define T 0
+#define P 1
+#define M 2
+#define B 3
+
+struct SharedData
+{
+    sem_t sem[4];
+    pid_t smokerPid[3];
+};
+SharedData *sharedData;
+
+bool ignoreSigterm = false, isSigtermReceived = false;
+void SigtermHandler(int signum)
+{
+    if (signum == SIGTERM)
+    {
+        isSigtermReceived = true;
+
+        if (ignoreSigterm)
+            return;
+
+        exit(0);
+    }
+}
 
 void Smoker(int id)
 {
+    signal(SIGTERM, SigtermHandler);
+
+    while (true)
+    {
+        sem_wait(&sharedData->sem[id]);
+        ignoreSigterm = true;
+        sleep(rand() % 4 + 1); // simulate smoking
+
+        switch (id)
+        {
+        case T:
+            cout << 'T' << endl;
+            break;
+        case P:
+            cout << 'P' << endl;
+            break;
+        case M:
+            cout << 'M' << endl;
+            break;
+        }
+
+        ignoreSigterm = false;
+        if (isSigtermReceived)
+           exit(0);
+    }
 }
 
 void Bartender()
 {
-    char item;
-    cin >> item;
-    switch (item)
-    {
-    case 'B':
-        break;
-    case 'T':
-        break;
-    case 'P':
+    string items;
+    getline(cin, items);
 
-        break;
-    case 'M':
-        break;
+    cout << "Items: " << items << endl;
+
+    for (char item : items)
+    {
+        if (item == ' ')
+            continue;
+
+        sleep(rand() % 4 + 1);
+        switch (item)
+        {
+        case 't':
+            cout << "Find t: " << endl;
+            sem_post(&sharedData->sem[T]);
+            break;
+        case 'p':
+            cout << "Find p: " << endl;
+            sem_post(&sharedData->sem[P]);
+            break;
+        case 'm':
+            cout << "Find m: " << endl;
+            sem_post(&sharedData->sem[M]);
+            break;
+        }
     }
+
+    sleep(rand() % 4 + 1); 
+    cout << "Bartender finished" << endl;
+
+    for (int i = 0; i < 3; i++)
+        kill(sharedData->smokerPid[i], SIGTERM);
 }
 
 int main()
 {
-    int shmSize = 4 * sizeof(sem_t);
-    string shmName = "/smokers" + to_string(getpid());
+    srand(time(NULL));
 
-    int shmFd = shm_open(shmName.c_str(), O_CREAT | O_RDWR, 0666);
-    if (shmFd == -1)
-    {
-        perror("shm_open failed");
-        exit(errno);
-    }
-
-    if (ftruncate(shmFd, shmSize) == -1)
-    {
-        perror("ftruncate failed");
-        exit(errno);
-    }
-
-    sem_t *sem = (sem_t *)mmap(NULL, shmSize, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0);
-    if (sem == MAP_FAILED)
+    sharedData = (SharedData *)mmap(NULL, sizeof(SharedData), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (sharedData == MAP_FAILED)
     {
         perror("mmap failed");
         exit(errno);
     }
 
     for (int i = 0; i < 4; i++)
-        sem_init(&sem[i], 1, 1);
+        sem_init(&sharedData->sem[i], 1, 0);
 
-    for (int i = 1; i <= 3; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         pid_t pid = fork();
+        if (pid < 0)
+        {
+            perror("fork failed");
+            exit(errno);
+        }
+
         if (pid == 0)
         {
             Smoker(i);
             return 0;
         }
+
+        sharedData->smokerPid[i] = pid;
     }
 
     Bartender();
 
-    // for(int i = 0; i < 4; i++)
-    //    sem_destroy(&sem[i]);
+    cout << "waiting for smokers to finish" << endl;
+    for (int i = 0; i < 3; ++i)
+        wait(NULL);
+
+    for (int i = 0; i < 4; i++)
+        sem_destroy(&sharedData->sem[i]);
 
     return 0;
 }

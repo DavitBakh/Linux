@@ -64,9 +64,11 @@ void Smoker(int id)
             break;
         }
 
+        sem_post(&sharedData->sem[B]);
+
         ignoreSigterm = false;
         if (isSigtermReceived)
-           exit(0);
+            exit(0);
     }
 }
 
@@ -82,7 +84,9 @@ void Bartender()
         if (item == ' ')
             continue;
 
-        sleep(rand() % 4 + 1);
+        sem_wait(&sharedData->sem[B]);
+
+        sleep(rand() % 4 + 1); // searching for items
         switch (item)
         {
         case 't':
@@ -100,7 +104,6 @@ void Bartender()
         }
     }
 
-    sleep(rand() % 4 + 1); 
     cout << "Bartender finished" << endl;
 
     for (int i = 0; i < 3; i++)
@@ -118,8 +121,10 @@ int main()
         exit(errno);
     }
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 3; i++)
         sem_init(&sharedData->sem[i], 1, 0);
+
+    sem_init(&sharedData->sem[B], 1, 3);
 
     for (int i = 0; i < 3; ++i)
     {
@@ -141,7 +146,6 @@ int main()
 
     Bartender();
 
-    cout << "waiting for smokers to finish" << endl;
     for (int i = 0; i < 3; ++i)
         wait(NULL);
 

@@ -2,7 +2,8 @@
 
 #include <vector>
 
-class Bill {
+class Bill
+{
 public:
   int cur_balance;
   int min_pos_balance;
@@ -11,13 +12,11 @@ public:
   int ID;
 };
 
-
-class Bank {
+class Bank
+{
 private:
-  
-  std::vector <Bill> bills;
+  std::vector<Bill> bills;
 
-  
 public:
   Bank(int n);
   int print_balance(int id);
@@ -28,5 +27,4 @@ public:
   void set_min_balance(int id, int sum);
   void set_max_balance(int id, int sum);
   void print();
-
 };

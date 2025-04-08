@@ -5,9 +5,9 @@
 class Bill
 {
 public:
-  int cur_balance;
-  int min_pos_balance;
-  int max_pos_balance;
+  int currBalance;
+  int minBalance;
+  int maxBalance;
   bool is_frozen;
   int ID;
 };
@@ -20,12 +20,17 @@ private:
 
 public:
   Bank(int n);
-  int print_balance(int id);
+  void printBalance(int id);
+  void printMinBalance(int id);
+  void printMaxBalance(int id);
+
   void froze_defroze(int id);
+
   void transfer(int from_id, int to_id, int sum);
-  void transfer_to_all(int sum);
-  void set_balance(int id, int sum);
-  void set_min_balance(int id, int sum);
-  void set_max_balance(int id, int sum);
+  void creditToAll(int sum);
+  void writeOffFromAll(int sum);
+
+  void setMinBalance(int id, int sum);
+  void setMaxBalance(int id, int sum);
   void print();
 };

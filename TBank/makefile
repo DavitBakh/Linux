@@ -1,4 +1,4 @@
-all: init client
+all: init client destroy
 
 init: init.o bank.o
 	g++ init.o bank.o -lrt -o init
@@ -15,5 +15,11 @@ client: client.o bank.o
 client.o: client.cpp
 	g++ client.cpp -c -o client.o
 
+destroy: destroy.o
+	g++ destroy.o -lrt -o destroy
+
+destroy.o: destroy.cpp
+	g++ destroy.cpp -c -o destroy.o
+
 clean:
-	rm -rf *.o init client
+	rm -rf *.o init client destroy

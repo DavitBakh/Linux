@@ -15,7 +15,8 @@ public:
 class Bank
 {
 private:
-  std::vector<Bill> bills;
+  int size;
+  Bill bills[];
 
 public:
   Bank(int n);

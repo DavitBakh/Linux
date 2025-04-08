@@ -2,10 +2,9 @@
 #include "bank.h"
 #include <climits>
 
-Bank::Bank(int n)
+Bank::Bank(int n) : size(n)
 {
-	bills.resize(n);
-	for (int ind = 0; ind < bills.size(); ind++)
+	for (int ind = 0; ind < size; ind++)
 	{
 		bills[ind].cur_balance = 0;
 		bills[ind].min_pos_balance = INT_MIN;
@@ -17,9 +16,8 @@ Bank::Bank(int n)
 
 void Bank::print()
 {
-	std::cout << bills.size() << std::endl;
-	std::cout << bills.front().ID << std::endl;
-	for (int i = 0; i < bills.size(); i++)
+	std::cout << size << std::endl;
+	for (int i = 0; i < size; i++)
 	{
 		std::cout << "ID: " << bills[i].ID << "\n\t curr balance: "
 				  << bills[i].cur_balance << "\n\t min balance: "
@@ -27,5 +25,4 @@ void Bank::print()
 				  << bills[i].max_pos_balance << "\n\t is forzen: "
 				  << bills[i].is_frozen << std::endl;
 	}
-	std::cout << 2 << std::endl;
 }

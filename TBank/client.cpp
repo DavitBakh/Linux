@@ -18,7 +18,6 @@ int main(int argc, char **argv)
   }
 
   int shm_size = sb.st_size;
-  std::cout << shm_size << std::endl;
   void *shm_ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   Bank *bank = (Bank *)shm_ptr;
   bank->print();

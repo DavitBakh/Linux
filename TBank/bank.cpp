@@ -83,6 +83,16 @@ void Bank::froze_defroze(int id)
 	std::cout << "----------------------------------------" << std::endl;
 }
 
+bool Bank::isFrozen(int id)
+{
+	if (id < 0 || id >= size)
+	{
+		std::cout << "ID is out of range" << std::endl;
+		return false;
+	}
+	return bills[id].is_frozen;
+}
+
 void Bank::transfer(int from_id, int to_id, int sum)
 {
 	if (sum <= 0)

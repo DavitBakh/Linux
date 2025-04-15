@@ -25,6 +25,7 @@ public:
   void printMaxBalance(int id);
 
   void froze_defroze(int id);
+  bool isFrozen(int id);
 
   void transfer(int from_id, int to_id, int sum);
   void creditToAll(int sum);

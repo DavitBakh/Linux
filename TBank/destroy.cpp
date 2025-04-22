@@ -6,5 +6,5 @@
 int main()
 {
   sem_unlink("/TBankSem");
-  shm_unlink("/TransparentBank");
+  shm_unlink("/TBank");
 }

@@ -11,7 +11,7 @@ using namespace std;
 int main(int argc, char **argv)
 {
 
-  int shm_fd = shm_open("/TransparentBank", O_RDWR, 0666);
+  int shm_fd = shm_open("/TBank", O_RDWR, 0666);
   struct stat sb;
   if (fstat(shm_fd, &sb) == -1)
   {

@@ -25,7 +25,7 @@ int main(int argc, char **argv)
   sem_wait(sem);
 
   int n = atoi(argv[1]);
-  int shm_fd = shm_open("/TransparentBank", O_CREAT | O_TRUNC | O_RDWR, 0666);
+  int shm_fd = shm_open("/TBank", O_CREAT | O_TRUNC | O_RDWR, 0666);
   int shm_size = sizeof(Bank) + sizeof(Bill) * n;
   if (ftruncate(shm_fd, shm_size) < 0)
   {

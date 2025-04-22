@@ -8,24 +8,12 @@
 
 using namespace std;
 
-int main(int argc, char **argv)
+void PrintCommands()
 {
-
-  int shm_fd = shm_open("/TBank", O_RDWR, 0666);
-  struct stat sb;
-  if (fstat(shm_fd, &sb) == -1)
-  {
-    perror("lstat");
-    exit(EXIT_FAILURE);
-  }
-
-  int shm_size = sb.st_size;
-  void *shm_ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  Bank *bank = (Bank *)shm_ptr;
-
   cout << "\n----------------------------------------" << endl;
   cout << "Welcome to our transparent bank!" << endl;
-  cout << "----------------------------------------\n" << endl;
+  cout << "----------------------------------------\n"
+       << endl;
 
   cout << "There is avilable commands:" << endl;
   cout << "----------------------------------------" << endl;
@@ -45,10 +33,28 @@ int main(int argc, char **argv)
 
   cout << "\t11. Print all accounts" << endl;
   cout << "\t 0. Exit" << endl;
-  cout << "----------------------------------------\n" << endl;
+  cout << "\t-1. Commands list" << endl;
+  cout << "----------------------------------------\n"
+       << endl;
+}
 
+int main(int argc, char **argv)
+{
+
+  int shm_fd = shm_open("/TBank", O_RDWR, 0666);
+  struct stat sb;
+  if (fstat(shm_fd, &sb) == -1)
+  {
+    perror("lstat");
+    exit(EXIT_FAILURE);
+  }
+
+  int shm_size = sb.st_size;
+  void *shm_ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  Bank *bank = (Bank *)shm_ptr;
+
+  PrintCommands();
   cout << "Enter command: ";
-  cout << "\n----------------------------------------" << endl;
   int command;
   cin >> command;
 
@@ -56,6 +62,9 @@ int main(int argc, char **argv)
   {
     switch (command)
     {
+    case -1:
+      PrintCommands();
+      break;
     case 1:
       int id;
       cin >> id;
@@ -73,7 +82,7 @@ int main(int argc, char **argv)
     case 4:
       cin >> id;
 
-      if(bank->isFrozen(id))
+      if (bank->isFrozen(id))
       {
         cout << "Account: " << id << " is already frozen" << endl;
         break;
@@ -84,7 +93,7 @@ int main(int argc, char **argv)
 
     case 5:
       cin >> id;
-      if(!bank->isFrozen(id))
+      if (!bank->isFrozen(id))
       {
         cout << "Account: " << id << " is already defrozen" << endl;
         break;
@@ -125,13 +134,9 @@ int main(int argc, char **argv)
     default:
       cout << "Unknown command" << endl;
     }
-    cout << "\n----------------------------------------" << endl;
     cout << "Enter command: ";
     cin >> command;
   }
-  
-  
-
 
   munmap(shm_ptr, shm_size);
   close(shm_fd);

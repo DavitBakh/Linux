@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <semaphore.h>
 
 class Bill
 {
@@ -15,11 +16,12 @@ public:
 class Bank
 {
 private:
+  sem_t sem;
   int size;
   Bill bills[];
 
 public:
-  Bank(int n);
+  Bank(int n);  
   void printBalance(int id);
   void printMinBalance(int id);
   void printMaxBalance(int id);

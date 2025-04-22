@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unistd.h>
 #include "bank.h"
 #include <climits>
 
@@ -6,6 +7,8 @@ using namespace std;
 
 Bank::Bank(int n) : size(n)
 {
+	sem_init(&sem, 1, 1);
+
 	for (int ind = 0; ind < size; ind++)
 	{
 		bills[ind].currBalance = 0;
@@ -33,6 +36,8 @@ void Bank::print()
 
 void Bank::printBalance(int id)
 {
+	sem_wait(&sem);
+	sleep(5);
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
@@ -41,6 +46,8 @@ void Bank::printBalance(int id)
 
 	cout << "ID: " << id << " Balance: " << bills[id].currBalance << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::printMinBalance(int id)

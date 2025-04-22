@@ -5,6 +5,5 @@
 
 int main()
 {
-  sem_unlink("/TBankSem");
   shm_unlink("/TBank");
 }

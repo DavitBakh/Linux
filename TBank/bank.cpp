@@ -146,24 +146,28 @@ void Bank::transfer(int from_id, int to_id, int sum)
 	if (from_id < 0 || from_id >= size || to_id < 0 || to_id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 
 	if (bills[from_id].is_frozen || bills[to_id].is_frozen)
 	{
 		std::cout << "One of the accounts is frozen" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 
 	if (bills[from_id].currBalance - sum < bills[from_id].minBalance)
 	{
 		std::cout << "Not enough money on the account" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 
 	if (bills[to_id].currBalance + sum > bills[to_id].maxBalance)
 	{
 		std::cout << "Too much money on the account" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 
@@ -244,16 +248,19 @@ void Bank::setMinBalance(int id, int sum)
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	if (sum > bills[id].currBalance)
 	{
 		std::cout << "Min balance can't be more than current balance" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	if (sum > bills[id].maxBalance)
 	{
 		std::cout << "Min balance can't be more than max balance" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	
@@ -272,17 +279,20 @@ void Bank::setMaxBalance(int id, int sum)
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	if (sum < bills[id].currBalance)
 	{
 		std::cout << "Max balance can't be less than current balance" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 
 	if (sum < bills[id].minBalance)
 	{
 		std::cout << "Max balance can't be less than min balance" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 

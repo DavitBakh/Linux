@@ -9,6 +9,7 @@ Bank::Bank(int n) : size(n)
 {
 	sem_init(&sem, 1, 1);
 
+	sem_wait(&sem);
 	for (int ind = 0; ind < size; ind++)
 	{
 		bills[ind].currBalance = 0;
@@ -17,10 +18,13 @@ Bank::Bank(int n) : size(n)
 		bills[ind].is_frozen = false;
 		bills[ind].ID = ind;
 	}
+	sem_post(&sem);
 }
 
 void Bank::print()
 {
+	sem_wait(&sem);
+	
 	std::cout << size << std::endl;
 	for (int i = 0; i < size; i++)
 	{
@@ -30,17 +34,19 @@ void Bank::print()
 				  << bills[i].maxBalance << "\n\t is forzen: "
 				  << bills[i].is_frozen << std::endl;
 	}
-
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::printBalance(int id)
 {
 	sem_wait(&sem);
-	sleep(5);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 
@@ -52,31 +58,44 @@ void Bank::printBalance(int id)
 
 void Bank::printMinBalance(int id)
 {
+	sem_wait(&sem);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	cout << "ID: " << id << " Min balance: " << bills[id].minBalance << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::printMaxBalance(int id)
 {
+	sem_wait(&sem);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	cout << "ID: " << id << " Max balance: " << bills[id].maxBalance;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::froze_defroze(int id)
 {
+	sem_wait(&sem);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return;
 	}
 	bills[id].is_frozen = !bills[id].is_frozen;
@@ -88,16 +107,25 @@ void Bank::froze_defroze(int id)
 		cout << "defrozen" << endl;
 
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 bool Bank::isFrozen(int id)
 {
+	sem_wait(&sem);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
+		sem_post(&sem);
 		return false;
 	}
-	return bills[id].is_frozen;
+
+	bool res = bills[id].is_frozen;
+	sem_post(&sem);
+
+	return res;
 }
 
 void Bank::transfer(int from_id, int to_id, int sum)
@@ -114,6 +142,7 @@ void Bank::transfer(int from_id, int to_id, int sum)
 		return;
 	}
 
+	sem_wait(&sem);
 	if (from_id < 0 || from_id >= size || to_id < 0 || to_id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
@@ -152,10 +181,14 @@ void Bank::transfer(int from_id, int to_id, int sum)
 
 	std::cout << "Transfer completed" << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::creditToAll(int sum)
 {
+	sem_wait(&sem);
+
 	for (int i = 0; i < size; i++)
 	{
 		if (bills[i].is_frozen)
@@ -174,10 +207,14 @@ void Bank::creditToAll(int sum)
 
 	std::cout << "Credited " << sum << " to all accounts" << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::writeOffFromAll(int sum)
 {
+	sem_wait(&sem);
+
 	for (int i = 0; i < size; i++)
 	{
 		if (bills[i].is_frozen)
@@ -196,10 +233,14 @@ void Bank::writeOffFromAll(int sum)
 
 	std::cout << "Wrote off " << sum << " from all accounts" << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::setMinBalance(int id, int sum)
 {
+	sem_wait(&sem);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
@@ -220,10 +261,14 @@ void Bank::setMinBalance(int id, int sum)
 
 	std::cout << "Min balance of account ID: " << id << " is set to " << sum << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }
 
 void Bank::setMaxBalance(int id, int sum)
 {
+	sem_wait(&sem);
+
 	if (id < 0 || id >= size)
 	{
 		std::cout << "ID is out of range" << std::endl;
@@ -245,4 +290,6 @@ void Bank::setMaxBalance(int id, int sum)
 
 	std::cout << "Max balance of account ID: " << id << " is set to " << sum << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
+
+	sem_post(&sem);
 }

@@ -1,24 +1,23 @@
-#include <iostream>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <pthread.h>
-#include <mutex>
-#include <string>
-#include <poll.h>
-#include <vector>
+#include "includeAll.h"
 #include "parallel_scheduler.h"
+#include "bank.h"
 
 #define PORT 8888
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 1024
 #define SERVER_TIMEOUT 10000 // 10 seconds
 #define POOLSIZE 10
+
+Bank* bank;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void SafeCout(std::string message)
+{
+    pthread_mutex_lock(&mutex);
+    std::cout << message;
+    pthread_mutex_unlock(&mutex);
+}
 
 struct Client
 {
@@ -29,18 +28,47 @@ struct Client
     Client(int socket, char *buffer, int size) : socket(socket), buffer(buffer), size(size) {}
 };
 
+void DoCommand(vector<int>& operands)
+{
+    
+}
 
 void *clientHandler(void *arg)
 {
-
     Client *client = (Client *)arg;
+    
+    const char *delim = " ";
+    char *token = strtok(client->buffer, delim);
 
+    if (token == NULL)
+        SafeCout("Invalid Input");
 
-    return NULL;
+    char *operand = strtok(NULL, delim);
+    std::vector<int> operands;
+    while (operand != NULL)
+    {
+        operands.push_back(atoi(operand));
+        operand = strtok(NULL, delim);
+    }
+
+    DoCommand(operands);
+    
 }
 
 int main()
 {
+    int shm_fd = shm_open("/TBank", O_RDWR, 0666);
+    struct stat sb;
+    if (fstat(shm_fd, &sb) == -1)
+    {
+        perror("lstat");
+        exit(EXIT_FAILURE);
+    }
+
+    int shm_size = sb.st_size;
+    void *shm_ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    bank = (Bank *)shm_ptr;
+
     parallel_scheduler scheduler(POOLSIZE);
 
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);

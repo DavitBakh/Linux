@@ -27,8 +27,8 @@ parallel_scheduler.o: parallel_scheduler.cpp parallel_scheduler.h
 clean:
 	rm -rf *.o init server client destroy
 
-#client: client.o bank.o
-#	g++ client.o bank.o -lrt -o client
+client: client.o bank.o
+	g++ client.o bank.o -lrt -o client
 
-#client.o: client.cpp
-#	g++ client.cpp -c -o client.o
+client.o: client.cpp
+	g++ client.cpp -c -o client.o

@@ -16,11 +16,11 @@ public:
 class Bank
 {
 public:
-  string errorMessage = "An error has occurred, please contact the bank's support service";
-  string successMessage = "Success";
+  char errorMessage[65] = "An error has occurred, please contact the bank's support service";
+  char successMessage[8] = "Success";
 
 private:
-  string commandsList =
+char commandsList[549] =
       "\n----------------------------------------\n"
       "Welcome to our transparent bank!\n"
       "----------------------------------------\n\n"

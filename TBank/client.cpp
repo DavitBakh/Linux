@@ -45,7 +45,7 @@ int main()
     {
         getline(std::cin, mess);
 
-        if(mess == "/exit")
+        if(mess == "/exit" || mess == "0")
         {
             close(server_socket);
             return 0;

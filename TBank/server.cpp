@@ -5,7 +5,7 @@
 #define PORT 8888
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 1024
-#define SERVER_TIMEOUT 10000 // 10 seconds
+#define SERVER_TIMEOUT -1 //10000 == 10 seconds
 #define POOLSIZE 10
 
 Bank *bank;
@@ -79,18 +79,12 @@ void *clientHandler(void *arg)
 {
     Client *client = (Client *)arg;
 
-    const char *delim = " ";
-    char *token = strtok(client->buffer, delim);
-
-    if (token == NULL)
-        SafeCout("Invalid Input");
-
-    char *operand = strtok(NULL, delim);
     std::vector<int> operands;
-    while (operand != NULL)
+    char *token = std::strtok(client->buffer, " ");
+    while (token != nullptr)
     {
-        operands.push_back(atoi(operand));
-        operand = strtok(NULL, delim);
+        operands.push_back(atoi(token));
+        token = std::strtok(nullptr, " ");
     }
 
     string res = DoCommand(operands);
@@ -112,8 +106,6 @@ int main()
     int shm_size = sb.st_size;
     void *shm_ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     bank = (Bank *)shm_ptr;
-
-    cout << "Bank size: " << bank->errorMessage << endl;
 
     parallel_scheduler scheduler(POOLSIZE);
 
@@ -205,15 +197,8 @@ int main()
                 close(client_socket);
             }
 
-            /*std::string welcome_message = "Welcome to our transparent bank!\n";
-            welcome_message += "----------------------------------------\n";
-            welcome_message += "There is available commands:\n";
-            welcome_message += "----------------------------------------\n";
-            welcome_message += bank->GetCommandsList();
-            welcome_message += "----------------------------------------\n\n";
-            std::cout << welcome_message << std::endl;*/
             std::string welcome_message = bank->GetCommandsList();
-            
+
             send(client_socket, welcome_message.c_str(), welcome_message.size(), 0);
         }
 
@@ -244,6 +229,8 @@ int main()
                 {
                     buffer[rs] = '\0';
                     Client client(fds[i].fd, buffer, rs);
+
+                    std::cout << "Received command: " << buffer << std::endl;
                     scheduler.run(clientHandler, &client);
                 }
             }

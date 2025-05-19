@@ -26,22 +26,24 @@ string Bank::getCommandsList()
 	return commandsList;
 }
 
-void Bank::GetAll()
+string Bank::GetAll()
 {
+	string res = "";
 	sem_wait(&sem);
 
-	std::cout << size << std::endl;
+	res += size + "\n";
 	for (int i = 0; i < size; i++)
 	{
-		std::cout << "ID: " << bills[i].ID << "\n\t curr balance: "
-				  << bills[i].currBalance << "\n\t min balance: "
-				  << bills[i].minBalance << "\n\t max balance: "
-				  << bills[i].maxBalance << "\n\t is forzen: "
-				  << bills[i].is_frozen << std::endl;
+		res += "ID: " + to_string(bills[i].ID) + "\n\t curr balance: "
+			   + to_string(bills[i].currBalance) + "\n\t min balance: "
+			   + to_string(bills[i].minBalance) + "\n\t max balance: "
+			   + to_string(bills[i].maxBalance) + "\n\t is forzen: "
+			   + to_string(bills[i].is_frozen) + "\n";
 	}
-	std::cout << "----------------------------------------" << std::endl;
-
+	res += "----------------------------------------\n";
 	sem_post(&sem);
+
+	return res;
 }
 
 int Bank::GetBalance(int id)

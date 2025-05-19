@@ -28,84 +28,53 @@ struct Client
     Client(int socket, char *buffer, int size) : socket(socket), buffer(buffer), size(size) {}
 };
 
-void DoCommand(vector<int> &operands)
+string DoCommand(vector<int> &operands)
 {
-    int command = operands[0];
     string res;
 
-    switch (command)
+    switch (operands[0])
     {
     case -1:
-        PrintCommands();
-        break;
+        return bank->getCommandsList();
     case 1:
-        int id;
-        cin >> id;
-        bank->printBalance(id);
-        break;
+        return to_string(bank->GetBalance(operands[1]));
     case 2:
-        cin >> id;
-        bank->printMinBalance(id);
-        break;
+        return to_string(bank->GetMinBalance(operands[1]));
     case 3:
-        cin >> id;
-        bank->printMaxBalance(id);
-        break;
-
+        return to_string(bank->GetMaxBalance(operands[1]));
     case 4:
-        cin >> id;
-
+        int id = operands[1];
         if (bank->isFrozen(id))
         {
             cout << "Account: " << id << " is already frozen" << endl;
-            break;
+            return "Account is already frozen";
         }
 
-        bank->froze_defroze(id);
-        break;
-
+        return bank->froze_defroze(id) ? bank->successMessage : bank->errorMessage;
     case 5:
-        cin >> id;
+        int id = operands[1];
         if (!bank->isFrozen(id))
         {
             cout << "Account: " << id << " is already defrozen" << endl;
-            break;
+            return "Account is already defrozen";
         }
-        bank->froze_defroze(id);
-        break;
+        return bank->froze_defroze(id) ? bank->successMessage : bank->errorMessage;
 
     case 6:
-        int from_id, to_id, sum;
-        cin >> from_id >> to_id >> sum;
-        bank->transfer(from_id, to_id, sum);
-        break;
-
+        int from_id = operands[1], to_id = operands[2], sum = operands[3];
+        return bank->transfer(from_id, to_id, sum) ? bank->successMessage : bank->errorMessage;
     case 7:
-        cin >> sum;
-        bank->writeOffFromAll(sum);
-        break;
-
+        return bank->writeOffFromAll(operands[1]) ? bank->successMessage : bank->errorMessage;
     case 8:
-        cin >> sum;
-        bank->creditToAll(sum);
-        break;
-
+        return bank->creditToAll(operands[1]) ? bank->successMessage : bank->errorMessage;
     case 9:
-        cin >> id >> sum;
-        bank->setMinBalance(id, sum);
-        break;
-
+        return bank->setMinBalance(operands[1], operands[2]) ? bank->successMessage : bank->errorMessage;
     case 10:
-        cin >> id >> sum;
-        bank->setMaxBalance(id, sum);
-        break;
-
+        return bank->setMaxBalance(operands[1], operands[2]) ? bank->successMessage : bank->errorMessage;
     case 11:
-        bank->print();
-        break;
-
+        return bank->GetAll();
     default:
-        cout << "Unknown command" << endl;
+        return "Unknown command";
     }
 }
 
@@ -127,7 +96,8 @@ void *clientHandler(void *arg)
         operand = strtok(NULL, delim);
     }
 
-    DoCommand(operands);
+    string res = DoCommand(operands);
+    send(client->socket, res.c_str(), res.size(), 0);
 }
 
 int main()

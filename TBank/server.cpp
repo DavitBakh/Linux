@@ -8,7 +8,7 @@
 #define SERVER_TIMEOUT 10000 // 10 seconds
 #define POOLSIZE 10
 
-Bank* bank;
+Bank *bank;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -28,15 +28,91 @@ struct Client
     Client(int socket, char *buffer, int size) : socket(socket), buffer(buffer), size(size) {}
 };
 
-void DoCommand(vector<int>& operands)
+void DoCommand(vector<int> &operands)
 {
-    
+    int command = operands[0];
+    string res;
+
+    switch (command)
+    {
+    case -1:
+        PrintCommands();
+        break;
+    case 1:
+        int id;
+        cin >> id;
+        bank->printBalance(id);
+        break;
+    case 2:
+        cin >> id;
+        bank->printMinBalance(id);
+        break;
+    case 3:
+        cin >> id;
+        bank->printMaxBalance(id);
+        break;
+
+    case 4:
+        cin >> id;
+
+        if (bank->isFrozen(id))
+        {
+            cout << "Account: " << id << " is already frozen" << endl;
+            break;
+        }
+
+        bank->froze_defroze(id);
+        break;
+
+    case 5:
+        cin >> id;
+        if (!bank->isFrozen(id))
+        {
+            cout << "Account: " << id << " is already defrozen" << endl;
+            break;
+        }
+        bank->froze_defroze(id);
+        break;
+
+    case 6:
+        int from_id, to_id, sum;
+        cin >> from_id >> to_id >> sum;
+        bank->transfer(from_id, to_id, sum);
+        break;
+
+    case 7:
+        cin >> sum;
+        bank->writeOffFromAll(sum);
+        break;
+
+    case 8:
+        cin >> sum;
+        bank->creditToAll(sum);
+        break;
+
+    case 9:
+        cin >> id >> sum;
+        bank->setMinBalance(id, sum);
+        break;
+
+    case 10:
+        cin >> id >> sum;
+        bank->setMaxBalance(id, sum);
+        break;
+
+    case 11:
+        bank->print();
+        break;
+
+    default:
+        cout << "Unknown command" << endl;
+    }
 }
 
 void *clientHandler(void *arg)
 {
     Client *client = (Client *)arg;
-    
+
     const char *delim = " ";
     char *token = strtok(client->buffer, delim);
 
@@ -52,7 +128,6 @@ void *clientHandler(void *arg)
     }
 
     DoCommand(operands);
-    
 }
 
 int main()

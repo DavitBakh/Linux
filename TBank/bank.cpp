@@ -21,10 +21,15 @@ Bank::Bank(int n) : size(n)
 	sem_post(&sem);
 }
 
-void Bank::print()
+string Bank::getCommandsList()
+{
+	return commandsList;
+}
+
+void Bank::GetAll()
 {
 	sem_wait(&sem);
-	
+
 	std::cout << size << std::endl;
 	for (int i = 0; i < size; i++)
 	{
@@ -39,7 +44,7 @@ void Bank::print()
 	sem_post(&sem);
 }
 
-void Bank::printBalance(int id)
+int Bank::GetBalance(int id)
 {
 	sem_wait(&sem);
 
@@ -47,16 +52,15 @@ void Bank::printBalance(int id)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return INT_MIN;
 	}
 
-	cout << "ID: " << id << " Balance: " << bills[id].currBalance << std::endl;
-	std::cout << "----------------------------------------" << std::endl;
-
+	int res = bills[id].currBalance;
 	sem_post(&sem);
+	return res;
 }
 
-void Bank::printMinBalance(int id)
+int Bank::GetMinBalance(int id)
 {
 	sem_wait(&sem);
 
@@ -64,15 +68,15 @@ void Bank::printMinBalance(int id)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return INT_MIN;
 	}
-	cout << "ID: " << id << " Min balance: " << bills[id].minBalance << std::endl;
-	std::cout << "----------------------------------------" << std::endl;
 
+	int res = bills[id].minBalance;
 	sem_post(&sem);
+	return res;
 }
 
-void Bank::printMaxBalance(int id)
+int Bank::GetMaxBalance(int id)
 {
 	sem_wait(&sem);
 
@@ -80,15 +84,15 @@ void Bank::printMaxBalance(int id)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return INT_MIN;
 	}
-	cout << "ID: " << id << " Max balance: " << bills[id].maxBalance;
-	std::cout << "----------------------------------------" << std::endl;
 
+	int res = bills[id].maxBalance;
 	sem_post(&sem);
+	return res;
 }
 
-void Bank::froze_defroze(int id)
+bool Bank::froze_defroze(int id)
 {
 	sem_wait(&sem);
 
@@ -96,12 +100,12 @@ void Bank::froze_defroze(int id)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 	bills[id].is_frozen = !bills[id].is_frozen;
 
 	cout << "Account: " << id << " was ";
-	if(bills[id].is_frozen)
+	if (bills[id].is_frozen)
 		cout << "frozen" << endl;
 	else
 		cout << "defrozen" << endl;
@@ -109,6 +113,7 @@ void Bank::froze_defroze(int id)
 	std::cout << "----------------------------------------" << std::endl;
 
 	sem_post(&sem);
+	return true;
 }
 
 bool Bank::isFrozen(int id)
@@ -128,18 +133,18 @@ bool Bank::isFrozen(int id)
 	return res;
 }
 
-void Bank::transfer(int from_id, int to_id, int sum)
+bool Bank::transfer(int from_id, int to_id, int sum)
 {
 	if (sum <= 0)
 	{
 		std::cout << "Sum can't be negative or zero" << std::endl;
-		return;
+		return false;
 	}
 
 	if (from_id == to_id)
 	{
 		std::cout << "Can't transfer money to the same account" << std::endl;
-		return;
+		return false;
 	}
 
 	sem_wait(&sem);
@@ -147,28 +152,28 @@ void Bank::transfer(int from_id, int to_id, int sum)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 
 	if (bills[from_id].is_frozen || bills[to_id].is_frozen)
 	{
 		std::cout << "One of the accounts is frozen" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 
 	if (bills[from_id].currBalance - sum < bills[from_id].minBalance)
 	{
 		std::cout << "Not enough money on the account" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 
 	if (bills[to_id].currBalance + sum > bills[to_id].maxBalance)
 	{
 		std::cout << "Too much money on the account" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 
 	bills[from_id].currBalance -= sum;
@@ -187,9 +192,10 @@ void Bank::transfer(int from_id, int to_id, int sum)
 	std::cout << "----------------------------------------" << std::endl;
 
 	sem_post(&sem);
+	return true;
 }
 
-void Bank::creditToAll(int sum)
+bool Bank::creditToAll(int sum)
 {
 	sem_wait(&sem);
 
@@ -213,9 +219,10 @@ void Bank::creditToAll(int sum)
 	std::cout << "----------------------------------------" << std::endl;
 
 	sem_post(&sem);
+	return true;
 }
 
-void Bank::writeOffFromAll(int sum)
+bool Bank::writeOffFromAll(int sum)
 {
 	sem_wait(&sem);
 
@@ -239,9 +246,10 @@ void Bank::writeOffFromAll(int sum)
 	std::cout << "----------------------------------------" << std::endl;
 
 	sem_post(&sem);
+	return true;
 }
 
-void Bank::setMinBalance(int id, int sum)
+bool Bank::setMinBalance(int id, int sum)
 {
 	sem_wait(&sem);
 
@@ -249,30 +257,31 @@ void Bank::setMinBalance(int id, int sum)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 	if (sum > bills[id].currBalance)
 	{
 		std::cout << "Min balance can't be more than current balance" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 	if (sum > bills[id].maxBalance)
 	{
 		std::cout << "Min balance can't be more than max balance" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
-	
+
 	bills[id].minBalance = sum;
 
 	std::cout << "Min balance of account ID: " << id << " is set to " << sum << std::endl;
 	std::cout << "----------------------------------------" << std::endl;
 
 	sem_post(&sem);
+	return true;
 }
 
-void Bank::setMaxBalance(int id, int sum)
+bool Bank::setMaxBalance(int id, int sum)
 {
 	sem_wait(&sem);
 
@@ -280,20 +289,20 @@ void Bank::setMaxBalance(int id, int sum)
 	{
 		std::cout << "ID is out of range" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 	if (sum < bills[id].currBalance)
 	{
 		std::cout << "Max balance can't be less than current balance" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 
 	if (sum < bills[id].minBalance)
 	{
 		std::cout << "Max balance can't be less than min balance" << std::endl;
 		sem_post(&sem);
-		return;
+		return false;
 	}
 
 	bills[id].maxBalance = sum;
@@ -302,4 +311,5 @@ void Bank::setMaxBalance(int id, int sum)
 	std::cout << "----------------------------------------" << std::endl;
 
 	sem_post(&sem);
+	return true;
 }

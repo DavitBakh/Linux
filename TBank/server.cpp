@@ -10,13 +10,13 @@
 
 Bank *bank;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void SafeCout(std::string message)
 {
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&_mutex);
     std::cout << message;
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&_mutex);
 }
 
 struct Client
@@ -35,7 +35,7 @@ string DoCommand(vector<int> &operands)
     switch (operands[0])
     {
     case -1:
-        return bank->getCommandsList();
+        return bank->GetCommandsList();
     case 1:
         return to_string(bank->GetBalance(operands[1]));
     case 2:
@@ -43,26 +43,23 @@ string DoCommand(vector<int> &operands)
     case 3:
         return to_string(bank->GetMaxBalance(operands[1]));
     case 4:
-        int id = operands[1];
-        if (bank->isFrozen(id))
+        if (bank->isFrozen(operands[1]))
         {
-            cout << "Account: " << id << " is already frozen" << endl;
+            cout << "Account: " << operands[1] << " is already frozen" << endl;
             return "Account is already frozen";
         }
 
-        return bank->froze_defroze(id) ? bank->successMessage : bank->errorMessage;
+        return bank->froze_defroze(operands[1]) ? bank->successMessage : bank->errorMessage;
     case 5:
-        int id = operands[1];
-        if (!bank->isFrozen(id))
+        if (!bank->isFrozen(operands[1]))
         {
-            cout << "Account: " << id << " is already defrozen" << endl;
+            cout << "Account: " << operands[1] << " is already defrozen" << endl;
             return "Account is already defrozen";
         }
-        return bank->froze_defroze(id) ? bank->successMessage : bank->errorMessage;
+        return bank->froze_defroze(operands[1]) ? bank->successMessage : bank->errorMessage;
 
     case 6:
-        int from_id = operands[1], to_id = operands[2], sum = operands[3];
-        return bank->transfer(from_id, to_id, sum) ? bank->successMessage : bank->errorMessage;
+        return bank->transfer(operands[1], operands[2], operands[3]) ? bank->successMessage : bank->errorMessage;
     case 7:
         return bank->writeOffFromAll(operands[1]) ? bank->successMessage : bank->errorMessage;
     case 8:
@@ -98,6 +95,8 @@ void *clientHandler(void *arg)
 
     string res = DoCommand(operands);
     send(client->socket, res.c_str(), res.size(), 0);
+
+    return NULL;
 }
 
 int main()
@@ -113,6 +112,8 @@ int main()
     int shm_size = sb.st_size;
     void *shm_ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     bank = (Bank *)shm_ptr;
+
+    cout << "Bank size: " << bank->errorMessage << endl;
 
     parallel_scheduler scheduler(POOLSIZE);
 
@@ -203,6 +204,17 @@ int main()
                 std::cout << "No more clients can be connected" << std::endl;
                 close(client_socket);
             }
+
+            /*std::string welcome_message = "Welcome to our transparent bank!\n";
+            welcome_message += "----------------------------------------\n";
+            welcome_message += "There is available commands:\n";
+            welcome_message += "----------------------------------------\n";
+            welcome_message += bank->GetCommandsList();
+            welcome_message += "----------------------------------------\n\n";
+            std::cout << welcome_message << std::endl;*/
+            std::string welcome_message = bank->GetCommandsList();
+            
+            send(client_socket, welcome_message.c_str(), welcome_message.size(), 0);
         }
 
         for (int i = 1; i <= MAX_CLIENTS && ret; i++)
@@ -239,5 +251,7 @@ int main()
     }
 
     close(server_socket);
+    munmap(shm_ptr, shm_size);
+    close(shm_fd);
     return 0;
 }

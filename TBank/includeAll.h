@@ -17,6 +17,14 @@
 #include <vector>
 #include <sys/mman.h>
 #include <sys/stat.h> 
-#include <fcntl.h> 
+#include <fcntl.h>
+#include <semaphore.h>
+#include <climits>
+#include <atomic>
+#include <thread>
+#include <queue>
+#include <condition_variable>
+#include <functional>
+#include <cstring>
 
 #endif

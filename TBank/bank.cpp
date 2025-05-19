@@ -1,7 +1,5 @@
-#include <iostream>
-#include <unistd.h>
+#include "includeAll.h"
 #include "bank.h"
-#include <climits>
 
 using namespace std;
 
@@ -21,7 +19,7 @@ Bank::Bank(int n) : size(n)
 	sem_post(&sem);
 }
 
-string Bank::getCommandsList()
+string Bank::GetCommandsList()
 {
 	return commandsList;
 }

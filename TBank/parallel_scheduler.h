@@ -1,13 +1,7 @@
 #ifndef PARALLEL_SCHEDULER_H
 #define PARALLEL_SCHEDULER_H
 
-#include <thread>
-#include <vector>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-#include <functional>
-#include <atomic>
+#include "includeAll.h"
 
 using namespace std;
 

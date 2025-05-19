@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
-#include <semaphore.h>
+#include "includeAll.h"
+using namespace std;
 
 class Bill
 {
@@ -48,7 +48,7 @@ private:
 
 public:
   Bank(int n);
-  string getCommandsList();
+  string GetCommandsList();
   int GetBalance(int id);
   int GetMinBalance(int id);
   int GetMaxBalance(int id);

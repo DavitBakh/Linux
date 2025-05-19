@@ -45,11 +45,11 @@ int main()
     std::cout << "Waiting for connection\n";
 
     int html_fd = open("index.html", O_RDONLY);
-    char html[4096];
-    int bites = read(html_fd, html, 4096);
+    char html[16384];
+    int bites = read(html_fd, html, 16384);
     html[bites] = '\0';
 
-    char response[4096] = "HTTP/1.1 200 OK\r\n\n";
+    char response[16384] = "HTTP/1.1 200 OK\r\n\n";
     strcat(response, html);
 
     while (true)

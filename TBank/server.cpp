@@ -4,7 +4,7 @@
 
 #define PORT 8888
 #define MAX_CLIENTS 100
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 4096
 #define SERVER_TIMEOUT -1 // 10000 == 10 seconds
 #define POOLSIZE 10
 
@@ -88,38 +88,38 @@ void *clientHandler(void *arg)
     }
 
     string res = DoCommand(operands);
-    send(client->socket, res.c_str(), res.size(), 0);
+    std::cout << "Sending response: " << res << std::endl;
+
+    std::string httpResponse =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: " + std::to_string(res.size()) + "\r\n"
+    "Connection: close\r\n"
+    "\r\n" +
+    res;
+
+send(client->socket, httpResponse.c_str(), httpResponse.size(), 0);
 
     return NULL;
 }
 
-void is_http_request(int client_fd)
+int main(int argc, char *argv[])
 {
-    char buffer[8] = {0};
-    ssize_t n = recv(client_fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-    {
-        std::cout << "No data available" << std::endl;
-    }
-    else if (n == 0)
-    {
-        std::cout << "Client disconnected" << std::endl;
-    }
-    else
-    {
-        int html_fd = open("index.html", O_RDONLY);
-        char html[16384];
-        int bites = read(html_fd, html, 16384);
-        html[bites] = '\0';
+    char response[16384] = "HTTP/1.1 200 OK\r\n\n";
+    int html_fd = open("index.html", O_RDONLY);
+    char html[16384];
+    int bites = read(html_fd, html, 16384);
+    html[bites] = '\0';
 
-        char response[16384] = "HTTP/1.1 200 OK\r\n\n";
-        strcat(response, html);
-        send(client_fd, response, sizeof(response), 0);
-    }
-}
+    strcat(response, html);
 
-int main()
-{
+    bool isHttp = false;
+    if (argc == 2)
+    {
+        isHttp = true;
+        std::cout << "Server mode http" << std::endl;
+    }
+
     int shm_fd = shm_open("/TBank", O_RDWR, 0666);
     struct stat sb;
     if (fstat(shm_fd, &sb) == -1)
@@ -203,30 +203,35 @@ int main()
                 exit(errno);
             }
 
-            std::cout << "Connected client with address: " << std::string{inet_ntoa(client_address.sin_addr)} << std::endl;
+            if (isHttp)
+            {
+                send(client_socket, response, sizeof(response), 0);
+            }
+            else
+            {
+                std::string welcome_message = bank->GetCommandsList();
+                send(client_socket, welcome_message.c_str(), welcome_message.size(), 0);
+            }
 
-            //is_http_request(client_socket);
+            std::cout << "Connected client with address: " << std::string{inet_ntoa(client_address.sin_addr)} << std::endl;
 
             int i = 1;
             for (; i <= MAX_CLIENTS; i++)
             {
                 if (fds[i].fd == -1)
                 {
+                    if (i > MAX_CLIENTS)
+                    {
+                        std::cout << "No more clients can be connected" << std::endl;
+                        close(client_socket);
+                        break;
+                    }
+
                     fds[i].fd = client_socket;
                     fds[i].events = POLLIN;
                     break;
                 }
             }
-
-            if (i > MAX_CLIENTS)
-            {
-                std::cout << "No more clients can be connected" << std::endl;
-                close(client_socket);
-            }
-
-            std::string welcome_message = bank->GetCommandsList();
-
-            send(client_socket, welcome_message.c_str(), welcome_message.size(), 0);
         }
 
         for (int i = 1; i <= MAX_CLIENTS && ret; i++)
@@ -255,6 +260,26 @@ int main()
                 if (rs > 0)
                 {
                     buffer[rs] = '\0';
+
+                    if (isHttp)
+                    {
+                        const char *lastNewline = strrchr(buffer, '\n');
+                        int index = 0;
+                        while (lastNewline[index+1] != '\0')
+                        {
+                            buffer[index] = lastNewline[index+1];
+                            index++;
+                        }
+                        buffer[index] = '\0';
+
+                        if (index == 0)
+                        {
+                            close(fds[i].fd);
+                            fds[i].fd = -1;
+                            continue;
+                        }
+                        
+                    }
                     Client client(fds[i].fd, buffer, rs);
 
                     std::cout << "Received command: " << buffer << std::endl;

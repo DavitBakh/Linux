@@ -1,128 +1,279 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Transparent Bank</title>
   <style>
-    body { font-family: Arial; margin: 30px; }
-    h2 { color: #2a3f54; }
-    .section { margin-bottom: 25px; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
-    input, button { margin: 5px; padding: 5px; }
-    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #121212;
+      color: #eee;
+    }
+
+    h1 {
+      text-align: center;
+      color: #80cbc4;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+
+    .tabs button {
+      background-color: #263238;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .tabs button.active {
+      background-color: #4db6ac;
+      color: #000;
+    }
+
+    .section {
+      display: none;
+      margin-bottom: 25px;
+      padding: 15px;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    form {
+      margin-bottom: 10px;
+    }
+
+    input, button {
+      margin: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+
+    input {
+      background-color: #263238;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: #4db6ac;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #popup {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.6);
+      align-items: center;
+      justify-content: center;
+    }
+
+    #popup > div {
+      background: #263238;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      text-align: left;
+      color: #fff;
+      position: relative;
+    }
+
+    #popup pre {
+      background-color: #1e1e1e;
+      padding: 10px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      color: #c5e1a5;
+    }
+
+    #popup button {
+      background-color: #ff8a65;
+      color: black;
+      margin-top: 10px;
+    }
+
+    #popup-timer-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background-color: #4db6ac;
+      width: 100%;
+      transition: width linear 5s;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
   </style>
 </head>
 <body>
 
   <h1>Transparent Bank Interface</h1>
 
-  <div class="section">
-    <h2>Account Actions</h2>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-target="accounts">Account</button>
+    <button class="tab" data-target="freeze">Freeze</button>
+    <button class="tab" data-target="transfer">Transfer</button>
+    <button class="tab" data-target="bulk">Bulk</button>
+    <button class="tab" data-target="limits">Limits</button>
+    <button class="tab" data-target="other">Other</button>
+  </div>
+
+  <!-- Tab Sections -->
+  <div id="accounts" class="section active">
     <form data-command="1">
-      <input type="number" name="id" placeholder="Account ID" required>
+      <input type="number" placeholder="Account ID" required />
       <button>Get Balance</button>
     </form>
-
     <form data-command="2">
-      <input type="number" name="id" placeholder="Account ID" required>
+      <input type="number" placeholder="Account ID" required />
       <button>Get Min Balance</button>
     </form>
-
     <form data-command="3">
-      <input type="number" name="id" placeholder="Account ID" required>
+      <input type="number" placeholder="Account ID" required />
       <button>Get Max Balance</button>
     </form>
   </div>
 
-  <div class="section">
-    <h2>Freeze / Defreeze</h2>
+  <div id="freeze" class="section">
     <form data-command="4">
-      <input type="number" name="id" placeholder="Account ID" required>
+      <input type="number" placeholder="Account ID" required />
       <button>Freeze</button>
     </form>
-
     <form data-command="5">
-      <input type="number" name="id" placeholder="Account ID" required>
+      <input type="number" placeholder="Account ID" required />
       <button>Defreeze</button>
     </form>
   </div>
 
-  <div class="section">
-    <h2>Transfer</h2>
+  <div id="transfer" class="section">
     <form data-command="6">
-      <input type="number" name="from_id" placeholder="From ID" required>
-      <input type="number" name="to_id" placeholder="To ID" required>
-      <input type="number" name="sum" placeholder="Amount" required>
+      <input type="number" placeholder="From ID" required />
+      <input type="number" placeholder="To ID" required />
+      <input type="number" placeholder="Amount" required />
       <button>Transfer</button>
     </form>
   </div>
 
-  <div class="section">
-    <h2>Bulk Operations</h2>
+  <div id="bulk" class="section">
     <form data-command="7">
-      <input type="number" name="sum" placeholder="Amount to Write Off" required>
+      <input type="number" placeholder="Amount to Write Off" required />
       <button>Write Off From All</button>
     </form>
-
     <form data-command="8">
-      <input type="number" name="sum" placeholder="Amount to Credit" required>
+      <input type="number" placeholder="Amount to Credit" required />
       <button>Credit To All</button>
     </form>
   </div>
 
-  <div class="section">
-    <h2>Set Limits</h2>
+  <div id="limits" class="section">
     <form data-command="9">
-      <input type="number" name="id" placeholder="Account ID" required>
-      <input type="number" name="sum" placeholder="Min Balance" required>
+      <input type="number" placeholder="Account ID" required />
+      <input type="number" placeholder="Min Balance" required />
       <button>Set Min Balance</button>
     </form>
-
     <form data-command="10">
-      <input type="number" name="id" placeholder="Account ID" required>
-      <input type="number" name="sum" placeholder="Max Balance" required>
+      <input type="number" placeholder="Account ID" required />
+      <input type="number" placeholder="Max Balance" required />
       <button>Set Max Balance</button>
     </form>
   </div>
 
-  <div class="section">
-    <h2>Other</h2>
+  <div id="other" class="section">
     <form data-command="11">
       <button>Print All Accounts</button>
     </form>
-
     <form data-command="-1">
       <button>Show Commands</button>
     </form>
   </div>
 
-  <div class="section">
-    <h2>Command Output</h2>
-    <pre id="output">No command sent yet.</pre>
+  <!-- Popup Modal -->
+  <div id="popup">
+    <div>
+      <div id="popup-timer-bar"></div>
+      <h2>Server Response</h2>
+      <pre id="popup-output"></pre>
+      <button onclick="closePopup()">Close</button>
+    </div>
   </div>
 
   <script>
+    let popupTimer = null;
+
+    function showPopup(message) {
+      clearTimeout(popupTimer);
+      document.getElementById("popup-output").textContent = message;
+      document.getElementById("popup").style.display = "flex";
+
+      const bar = document.getElementById("popup-timer-bar");
+      bar.style.transition = "none";
+      bar.style.width = "100%";
+      requestAnimationFrame(() => {
+        bar.style.transition = "width linear 5s";
+        bar.style.width = "0%";
+      });
+
+      popupTimer = setTimeout(closePopup, 5000);
+    }
+
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
+      clearTimeout(popupTimer);
+    }
+
+    // ESC key closes popup
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closePopup();
+    });
+
+    // Form submit handling
     document.querySelectorAll("form[data-command]").forEach(form => {
       form.addEventListener("submit", function (e) {
         e.preventDefault();
         const commandNumber = form.getAttribute("data-command");
         const inputs = form.querySelectorAll("input");
-        const args = Array.from(inputs).map(input => input.value.trim()).filter(v => v !== "");
+        const args = Array.from(inputs).map(input => input.value.trim()).filter(Boolean);
         const fullCommand = [commandNumber, ...args].join(" ");
 
         fetch("/api/command", {
           method: "POST",
-          headers: {
-            "Content-Type": "text/plain"
-          },
+          headers: { "Content-Type": "text/plain" },
           body: fullCommand
         })
         .then(res => res.text())
-        .then(responseText => {
-          document.getElementById("output").textContent = responseText;
-        })
-        .catch(err => {
-          document.getElementById("output").textContent = "Error: " + err;
-        });
+        .then(responseText => showPopup(responseText))
+        .catch(err => showPopup("Error: " + err));
+      });
+    });
+
+    // Tab switching
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.getAttribute("data-target")).classList.add("active");
       });
     });
   </script>

@@ -5,7 +5,7 @@
 #define PORT 8888
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 1024
-#define SERVER_TIMEOUT -1 //10000 == 10 seconds
+#define SERVER_TIMEOUT -1 // 10000 == 10 seconds
 #define POOLSIZE 10
 
 Bank *bank;
@@ -91,6 +91,31 @@ void *clientHandler(void *arg)
     send(client->socket, res.c_str(), res.size(), 0);
 
     return NULL;
+}
+
+void is_http_request(int client_fd)
+{
+    char buffer[8] = {0};
+    ssize_t n = recv(client_fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+    {
+        std::cout << "No data available" << std::endl;
+    }
+    else if (n == 0)
+    {
+        std::cout << "Client disconnected" << std::endl;
+    }
+    else
+    {
+        int html_fd = open("index.html", O_RDONLY);
+        char html[16384];
+        int bites = read(html_fd, html, 16384);
+        html[bites] = '\0';
+
+        char response[16384] = "HTTP/1.1 200 OK\r\n\n";
+        strcat(response, html);
+        send(client_fd, response, sizeof(response), 0);
+    }
 }
 
 int main()
@@ -179,6 +204,8 @@ int main()
             }
 
             std::cout << "Connected client with address: " << std::string{inet_ntoa(client_address.sin_addr)} << std::endl;
+
+            //is_http_request(client_socket);
 
             int i = 1;
             for (; i <= MAX_CLIENTS; i++)

@@ -75,6 +75,37 @@ string DoCommand(vector<int> &operands)
     }
 }
 
+void *clientHttpHandler(void *arg)
+{
+    Client *client = (Client *)arg;
+
+    std::vector<int> operands;
+    char *token = std::strtok(client->buffer, " ");
+    while (token != nullptr)
+    {
+        operands.push_back(atoi(token));
+        token = std::strtok(nullptr, " ");
+    }
+
+    string res = DoCommand(operands);
+    std::cout << "Sending response: " << res << std::endl;
+
+    char response[1024];
+
+    int len = snprintf(response, sizeof(response),
+                       "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: text/plain\r\n"
+                       "Content-Length: %zu\r\n"
+                       "Connection: close\r\n"
+                       "\r\n"
+                       "%s",
+                       res.size(), res.c_str());
+
+    // Then send the response:
+    send(client->socket, response, len, 0);
+    return NULL;
+}
+
 void *clientHandler(void *arg)
 {
     Client *client = (Client *)arg;
@@ -90,22 +121,7 @@ void *clientHandler(void *arg)
     string res = DoCommand(operands);
     std::cout << "Sending response: " << res << std::endl;
 
-    int html_fd = open("index.html", O_RDONLY);
-    
-    char body[] = "Hello from server!";
-    char response[1024];
-
-    int len = snprintf(response, sizeof(response),
-                       "HTTP/1.1 200 OK\r\n"
-                       "Content-Type: text/plain\r\n"
-                       "Content-Length: %zu\r\n"
-                       "Connection: close\r\n"
-                       "\r\n"
-                       "%s",
-                       strlen(body), body);
-
-    // Then send the response:
-    send(client->socket, response, len, 0);
+    send(client->socket, res.c_str(), res.size(), 0);
     return NULL;
 }
 
@@ -209,11 +225,7 @@ int main(int argc, char *argv[])
                 exit(errno);
             }
 
-            if (isHttp)
-            {
-                send(client_socket, response, sizeof(response), 0);
-            }
-            else
+            if (!isHttp)
             {
                 std::string welcome_message = bank->GetCommandsList();
                 send(client_socket, welcome_message.c_str(), welcome_message.size(), 0);
@@ -267,8 +279,16 @@ int main(int argc, char *argv[])
                 {
                     buffer[rs] = '\0';
 
-                    if (isHttp)
+                    std::cout << "Received command: " << buffer << std::endl;
+
+                    if (strncmp(buffer, "GET / ", 6) == 0)
                     {
+                        std::cout << "Sending HTML response" << std::endl;
+                        send(fds[i].fd, response, sizeof(response), 0);
+                    }
+                    else if (strncmp(buffer, "POST /api/command", 17) == 0)
+                    {
+
                         const char *lastNewline = strrchr(buffer, '\n');
                         int index = 0;
                         while (lastNewline[index + 1] != '\0')
@@ -278,17 +298,17 @@ int main(int argc, char *argv[])
                         }
                         buffer[index] = '\0';
 
-                        if (index == 0)
-                        {
-                            close(fds[i].fd);
-                            fds[i].fd = -1;
-                            continue;
-                        }
-                    }
-                    Client client(fds[i].fd, buffer, rs);
+                        Client client(fds[i].fd, buffer, rs);
+                        std::cout << "Running clientHttpHandler" << std::endl;
+                        scheduler.run(clientHttpHandler, &client);
 
-                    std::cout << "Received command: " << buffer << std::endl;
-                    scheduler.run(clientHandler, &client);
+                    }
+                    else
+                    {
+                        Client client(fds[i].fd, buffer, rs);
+                        std::cout << "Running clientHandler" << std::endl;
+                        scheduler.run(clientHandler, &client);
+                    }
                 }
             }
         }

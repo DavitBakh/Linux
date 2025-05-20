@@ -90,16 +90,22 @@ void *clientHandler(void *arg)
     string res = DoCommand(operands);
     std::cout << "Sending response: " << res << std::endl;
 
-    std::string httpResponse =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: " + std::to_string(res.size()) + "\r\n"
-    "Connection: close\r\n"
-    "\r\n" +
-    res;
+    int html_fd = open("index.html", O_RDONLY);
+    
+    char body[] = "Hello from server!";
+    char response[1024];
 
-send(client->socket, httpResponse.c_str(), httpResponse.size(), 0);
+    int len = snprintf(response, sizeof(response),
+                       "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: text/plain\r\n"
+                       "Content-Length: %zu\r\n"
+                       "Connection: close\r\n"
+                       "\r\n"
+                       "%s",
+                       strlen(body), body);
 
+    // Then send the response:
+    send(client->socket, response, len, 0);
     return NULL;
 }
 
@@ -265,9 +271,9 @@ int main(int argc, char *argv[])
                     {
                         const char *lastNewline = strrchr(buffer, '\n');
                         int index = 0;
-                        while (lastNewline[index+1] != '\0')
+                        while (lastNewline[index + 1] != '\0')
                         {
-                            buffer[index] = lastNewline[index+1];
+                            buffer[index] = lastNewline[index + 1];
                             index++;
                         }
                         buffer[index] = '\0';
@@ -278,7 +284,6 @@ int main(int argc, char *argv[])
                             fds[i].fd = -1;
                             continue;
                         }
-                        
                     }
                     Client client(fds[i].fd, buffer, rs);
 
